@@ -40,8 +40,12 @@ public class PlayerController : MonoBehaviourPun
 
         //photon double check just in case
         if (!photonView.IsMine) return;
-        
-        if (cam == null) return;
+
+        if (cam == null)
+        {
+            Debug.Log("Camera is null!");
+            return;
+        }
 
         //jump delay
         if (Input.GetButtonDown("Jump"))

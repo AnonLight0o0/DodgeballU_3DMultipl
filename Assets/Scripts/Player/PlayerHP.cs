@@ -5,12 +5,55 @@ using Photon.Pun;
 
 public class PlayerHP : MonoBehaviourPun
 {
+    public GameObject HealthBar;
+    private GameObject[] healthOrbs;
+
     public int MaxHP = 5;
     public int CurrentHP;
 
     void Start()
     {
         CurrentHP = MaxHP;
+
+        healthOrbs = new GameObject[5];
+
+        for (int i = 0; i < 5; i++)
+        {
+            Transform orb = HealthBar.transform.Find("Health" + (i + 1));
+
+            if (orb != null)
+            {
+                healthOrbs[i] = orb.gameObject;
+            }
+        }
+
+        UpdateHealthUI();
+    }
+
+    void Update()
+    {
+        if (!photonView.IsMine)
+            return;
+
+        // Debug: Press U to lose 1 HP
+        if (Input.GetKeyDown(KeyCode.U))
+        {
+            TakeDamage();
+        }
+    }
+
+    private void UpdateHealthUI()
+    {
+        if (healthOrbs == null)
+            return;
+
+        for (int i = 0; i < healthOrbs.Length; i++)
+        {
+            if (healthOrbs[i] != null)
+            {
+                healthOrbs[i].SetActive(i < CurrentHP);
+            }
+        }
     }
 
     // PunRPC is needed, don't delete
@@ -18,6 +61,7 @@ public class PlayerHP : MonoBehaviourPun
     public void TakeDamage(/*int damageNumbers*/)
     {
         CurrentHP -= 1; //要改数值的话记得把damageNumbers丢这里替代1
+        UpdateHealthUI();
         Debug.Log($"{photonView.Owner.NickName} was hit! Current HP:{CurrentHP}");
 
         if (CurrentHP <= 0)
