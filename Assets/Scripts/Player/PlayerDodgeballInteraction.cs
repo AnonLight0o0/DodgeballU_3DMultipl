@@ -168,7 +168,7 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
             PhotonView ballView = ballToCatch.GetComponent<PhotonView>();
             if (ballView != null)
             {
-                ballView.RPC("DestroySelf", RpcTarget.MasterClient);
+                ballView.RPC("DestroySelf", RpcTarget.All);
             }
 
             ballInReach.RemoveAt(0);

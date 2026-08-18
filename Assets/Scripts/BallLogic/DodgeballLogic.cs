@@ -62,7 +62,7 @@ public class DodgeballLogic : MonoBehaviourPun
     [PunRPC]
     public void DestroySelf()
     {
-        if (PhotonNetwork.IsMasterClient)
+        if (photonView.IsMine)
         {
             PhotonNetwork.Destroy(gameObject);
         }
