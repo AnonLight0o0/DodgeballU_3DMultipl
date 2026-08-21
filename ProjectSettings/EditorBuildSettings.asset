@@ -17,4 +17,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/DodgeballMap1.unity
     guid: d20136b640671a949829dca2deb10c57
+  - enabled: 1
+    path: Assets/Scenes/DodgeballMap2.unity
+    guid: 149c29173cc2ad7418c434c8704a81f5
+  - enabled: 1
+    path: Assets/Scenes/GameLobby (In progress).unity
+    guid: c2a75a987e5cbd04e9500e63314aacb9
   m_configObjects: {}
