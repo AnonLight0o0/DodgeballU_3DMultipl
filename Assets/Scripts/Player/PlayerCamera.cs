@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class PlayerCamera : MonoBehaviour
 {
+    public bool ControlsEnabled = true;
+
     public Transform target;
     public float distance = 5.0f;
     public float heightOffset = 1.5f;
@@ -28,6 +30,11 @@ public class PlayerCamera : MonoBehaviour
 
     void LateUpdate()
     {
+        if (!ControlsEnabled)
+            return;
+
+        if (target == null) return;
+
         if (target == null) return;
 
         x += Input.GetAxis("Mouse X") * xSpeed * 0.02f;

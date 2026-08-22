@@ -6,6 +6,7 @@ using Photon.Pun;
 
 public class PlayerDodgeballInteraction : MonoBehaviourPun
 {
+    public bool ControlsEnabled = true;
     public bool HasBall = false;
     public Transform throwPoint;
     public float ThrowForce = 300f;
@@ -51,7 +52,8 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
 
     void Update()
     {
-        if (!photonView.IsMine || Cam == null) return;
+        if (!photonView.IsMine || !ControlsEnabled || Cam == null)
+            return;
 
         ballInReach.RemoveAll(ball => ball == null);
 
