@@ -2,8 +2,8 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using Photon.Pun;
-using TMPro;
 using Photon.Realtime;
+using TMPro;
 
 public class HostAndJoinRoom : MonoBehaviourPunCallbacks
 {
@@ -27,20 +27,15 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
     [Tooltip("Total time the mode button remains disabled.")]
     public float modeButtonLockTime = 0.4f;
 
-    [Header("Connection")]
-    [Tooltip("Maximum time to wait before restoring the menu.")]
-    public float connectionTimeout = 4f;
-
     [Header("Loading UI")]
     public Image connectionLogo;
 
-    [Header("Room Not Found UI")]
-    public GameObject roomNotFoundImage;
-    public TMP_Text roomNotFoundText;
-    public float roomNotFoundDisplayTime = 3f;
+    [Header("Error UI")]
+    public GameObject errorImage;
+    public TMP_Text errorText;
+    public float errorDisplayTime = 4f;
 
-    private Coroutine roomNotFoundCoroutine;
-
+    private Coroutine errorCoroutine;
 
     [Header("Menu UI")]
     public GameObject backgroundImage;
@@ -48,39 +43,32 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
 
     private bool isHostMode = false;
     private bool isSwitchingMode = false;
-    private bool isConnecting = false;
 
     private Animator logoAnimator;
-
-    // Used when Photon needs to reconnect before performing the action.
-    private bool pendingRoomAction = false;
 
     private void Start()
     {
         // Load saved username
         if (PlayerPrefs.HasKey("Username"))
         {
-            string savedUsername = PlayerPrefs.GetString("Username");
-
-            if (savedUsername != "DefaultName")
+            if (PlayerPrefs.GetString("Username") != "DefaultName")
             {
-                input_Username.text = savedUsername;
+                input_Username.text = PlayerPrefs.GetString("Username");
             }
         }
 
-        // Reset UI
+        // Reset UI every time this scene loads
         if (backgroundImage != null)
             backgroundImage.SetActive(true);
 
         if (menuContainer != null)
             menuContainer.SetActive(true);
 
-        if (roomNotFoundImage != null)
+        if (errorImage != null)
         {
-            roomNotFoundImage.SetActive(false);
+            errorImage.SetActive(false);
         }
 
-        // Connection logo
         if (connectionLogo != null)
         {
             connectionLogo.gameObject.SetActive(false);
@@ -104,28 +92,17 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
             confirmButton.onClick.AddListener(StartRoomAction);
         }
 
-        // Initial text
+        // Set initial button text
         UpdateButtonText();
     }
 
-    private void Update()
-    {
-        if (roomNotFoundImage != null && roomNotFoundImage.activeSelf)
-        {
-            if (Input.GetMouseButtonDown(0))
-            {
-                HideRoomNotFoundMessage();
-            }
-        }
-    }
-
     // =========================================================
-    // HOST / JOIN MODE
+    // MODE SWITCHING
     // =========================================================
 
     public void SwitchHostJoinMode()
     {
-        if (isSwitchingMode || isConnecting)
+        if (isSwitchingMode)
             return;
 
         StartCoroutine(SwitchModeCoroutine());
@@ -135,24 +112,25 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
     {
         isSwitchingMode = true;
 
+        // Disable mode button during animation
         if (modeButton != null)
             modeButton.interactable = false;
 
-        // Change mode immediately
+        // Change actual mode immediately
         isHostMode = !isHostMode;
 
-        // Play flip animation
+        // Trigger animation
         if (modeAnimator != null)
         {
             modeAnimator.SetTrigger("FlipHostJoinMode");
         }
 
-        // Delay text change
+        // Wait before changing text
         yield return new WaitForSecondsRealtime(textChangeDelay);
 
         UpdateButtonText();
 
-        // Wait until total lock time has passed
+        // Wait remaining lock time
         float remainingTime = modeButtonLockTime - textChangeDelay;
 
         if (remainingTime > 0f)
@@ -160,12 +138,17 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
             yield return new WaitForSecondsRealtime(remainingTime);
         }
 
+        // Re-enable mode button
         if (modeButton != null)
             modeButton.interactable = true;
 
         isSwitchingMode = false;
 
-        Debug.Log(isHostMode ? "Switched to Host mode." : "Switched to Join mode.");
+        Debug.Log(
+            isHostMode
+                ? "Switched to Host mode."
+                : "Switched to Join mode."
+        );
     }
 
     private void UpdateButtonText()
@@ -189,43 +172,34 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
     }
 
     // =========================================================
-    // HOST / JOIN ACTION
+    // HOST / JOIN
     // =========================================================
 
     public void StartRoomAction()
     {
-        if (isConnecting || isSwitchingMode)
-            return;
-
-        if (roomNotFoundImage != null)
+        if (input_RoomNumber == null)
         {
-            roomNotFoundImage.SetActive(false);
+            Debug.LogError("Room number input field is NOT assigned.");
+            return;
         }
 
-        if (input_RoomNumber == null || string.IsNullOrWhiteSpace(input_RoomNumber.text))
+        if (string.IsNullOrEmpty(input_RoomNumber.text))
         {
-            Debug.LogWarning("Please enter a room number.");
+            Debug.Log("Please enter a room number.");
+            return;
+        }
+
+        if (!PhotonNetwork.IsConnectedAndReady)
+        {
+            Debug.LogWarning(
+                "Photon is not ready yet. Current state: " +
+                PhotonNetwork.NetworkClientState
+            );
+
             return;
         }
 
         SetUsername();
-
-        // Photon isn't currently ready.
-        // Reconnect first instead of calling CreateRoom/JoinRoom
-        // while Photon is disconnected.
-        if (!PhotonNetwork.IsConnectedAndReady)
-        {
-            Debug.LogWarning("Photon is not ready. Reconnecting...");
-
-            pendingRoomAction = true;
-
-            DisableMenu();
-            StartConnectionTimeout();
-
-            PhotonNetwork.ConnectUsingSettings();
-
-            return;
-        }
 
         if (isHostMode)
         {
@@ -239,14 +213,14 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
 
     private void CreateRoom()
     {
-        if (!PhotonNetwork.IsConnectedAndReady)
-        {
-            Debug.LogWarning("Cannot create room because Photon is not ready.");
-            RestoreMenu();
-            return;
-        }
+        LogPhotonConnectionInfo();
 
         ShowLoading();
+
+        Debug.Log(
+            "Attempting to CREATE room: " +
+            input_RoomNumber.text
+        );
 
         PhotonNetwork.CreateRoom(
             input_RoomNumber.text,
@@ -258,166 +232,138 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
             TypedLobby.Default,
             null
         );
-
-        StartConnectionTimeout();
     }
 
     private void JoinRoom()
     {
-        if (!PhotonNetwork.IsConnectedAndReady)
-        {
-            Debug.LogWarning("Cannot join room because Photon is not ready.");
-            RestoreMenu();
-            return;
-        }
+        LogPhotonConnectionInfo();
 
         ShowLoading();
 
-        PhotonNetwork.JoinRoom(input_RoomNumber.text);
+        Debug.Log(
+            "Attempting to JOIN room: " +
+            input_RoomNumber.text
+        );
 
-        StartConnectionTimeout();
+        PhotonNetwork.JoinRoom(input_RoomNumber.text);
     }
 
     // =========================================================
-    // PHOTON CALLBACKS
+    // PHOTON CONNECTION DIAGNOSTICS
     // =========================================================
+
+    private void LogPhotonConnectionInfo()
+    {
+        if (PhotonNetwork.PhotonServerSettings == null)
+        {
+            Debug.LogError("PhotonServerSettings is NULL.");
+            return;
+        }
+
+        AppSettings appSettings =
+            PhotonNetwork.PhotonServerSettings.AppSettings;
+
+        Debug.Log(
+            "========== PHOTON CONNECTION INFO ==========\n" +
+            "Connected: " + PhotonNetwork.IsConnected + "\n" +
+            "Ready: " + PhotonNetwork.IsConnectedAndReady + "\n" +
+            "Server: " + PhotonNetwork.Server + "\n" +
+            "State: " + PhotonNetwork.NetworkClientState + "\n" +
+            "Region: " + PhotonNetwork.CloudRegion + "\n" +
+            "App Version: " + PhotonNetwork.AppVersion + "\n" +
+            "App ID: " + appSettings.AppIdRealtime + "\n" +
+            "Room: " +
+                (PhotonNetwork.CurrentRoom != null
+                    ? PhotonNetwork.CurrentRoom.Name
+                    : "None") +
+            "\n" +
+            "============================================"
+        );
+    }
 
     public override void OnConnectedToMaster()
     {
-        Debug.Log("Connected to Photon Master Server.");
-
-        if (pendingRoomAction)
-        {
-            pendingRoomAction = false;
-
-            CancelConnectionTimeout();
-
-            if (isHostMode)
-            {
-                CreateRoom();
-            }
-            else
-            {
-                JoinRoom();
-            }
-        }
+        Debug.Log(
+            "========== CONNECTED TO PHOTON MASTER ==========\n" +
+            "Region: " + PhotonNetwork.CloudRegion + "\n" +
+            "App Version: " + PhotonNetwork.AppVersion + "\n" +
+            "Server: " + PhotonNetwork.Server +
+            "\n==============================================="
+        );
     }
 
     public override void OnJoinedRoom()
     {
-        Debug.Log("Successfully joined room.");
-
-        CancelConnectionTimeout();
-
-        isConnecting = false;
-        pendingRoomAction = false;
+        Debug.Log(
+            "Successfully joined room: " +
+            PhotonNetwork.CurrentRoom.Name
+        );
 
         if (logoAnimator != null)
         {
             logoAnimator.SetBool("isConnecting", false);
         }
 
-        // Both Host and Join players should enter WaitingRoom.
-        PhotonNetwork.LoadLevel("WaitingRoom");
+        if (PhotonNetwork.IsMasterClient)
+        {
+            PhotonNetwork.LoadLevel("WaitingRoom");
+        }
     }
 
     public override void OnJoinRoomFailed(short returnCode, string message)
     {
-        Debug.LogWarning("Failed to join room: " + message);
-
-        CancelConnectionTimeout();
-        RestoreMenu();
-
-        ShowRoomNotFoundMessage();
-    }
-
-    public override void OnCreateRoomFailed(short returnCode, string message)
-    {
-        Debug.LogWarning(
-            "Failed to create room. Return Code: "
-            + returnCode
-            + " | Message: "
-            + message
+        Debug.LogError(
+            "========== JOIN ROOM FAILED ==========\n" +
+            "Code: " + returnCode + "\n" +
+            "Message: " + message + "\n" +
+            "Region: " + PhotonNetwork.CloudRegion + "\n" +
+            "App Version: " + PhotonNetwork.AppVersion +
+            "\n======================================="
         );
 
-        CancelConnectionTimeout();
-        RestoreMenu();
-    }
+        // Return the normal menu
+        HideLoading();
 
-    public override void OnDisconnected(DisconnectCause cause)
-    {
-        Debug.LogWarning(
-            "Photon disconnected. Cause: "
-            + cause
+        // Show the room-not-found message
+        ShowRoomError(
+            "No room found with ID " + input_RoomNumber.text
         );
-
-        CancelConnectionTimeout();
-        RestoreMenu();
     }
 
-    // =========================================================
-    // LOADING / MENU
-    // =========================================================
-
-    private void ShowLoading()
+    private void ShowRoomError(string message)
     {
-        isConnecting = true;
-
-        if (backgroundImage != null)
-            backgroundImage.SetActive(false);
-
-        if (menuContainer != null)
-            menuContainer.SetActive(false);
-
-        if (connectionLogo != null)
+        if (errorCoroutine != null)
         {
-            connectionLogo.gameObject.SetActive(true);
-
-            if (logoAnimator != null)
-            {
-                logoAnimator.SetBool("isConnecting", true);
-            }
+            StopCoroutine(errorCoroutine);
         }
 
-        if (modeButton != null)
-            modeButton.interactable = false;
-
-        if (confirmButton != null)
-            confirmButton.interactable = false;
+        errorCoroutine = StartCoroutine(RoomErrorCoroutine(message));
     }
 
-    private void DisableMenu()
+    private IEnumerator RoomErrorCoroutine(string message)
     {
-        isConnecting = true;
-
-        if (backgroundImage != null)
-            backgroundImage.SetActive(false);
-
-        if (menuContainer != null)
-            menuContainer.SetActive(false);
-
-        if (connectionLogo != null)
+        if (errorImage != null)
         {
-            connectionLogo.gameObject.SetActive(true);
-
-            if (logoAnimator != null)
-            {
-                logoAnimator.SetBool("isConnecting", true);
-            }
+            errorImage.SetActive(true);
         }
 
-        if (modeButton != null)
-            modeButton.interactable = false;
+        if (errorText != null)
+        {
+            errorText.text = message;
+        }
 
-        if (confirmButton != null)
-            confirmButton.interactable = false;
+        yield return new WaitForSecondsRealtime(errorDisplayTime);
+
+        if (errorImage != null)
+        {
+            errorImage.SetActive(false);
+        }
+
+        errorCoroutine = null;
     }
 
-    private void RestoreMenu()
+    private void HideLoading()
     {
-        isConnecting = false;
-        pendingRoomAction = false;
-
         if (backgroundImage != null)
             backgroundImage.SetActive(true);
 
@@ -433,92 +379,29 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
                 logoAnimator.SetBool("isConnecting", false);
             }
         }
-
-        if (modeButton != null)
-            modeButton.interactable = true;
-
-        if (confirmButton != null)
-            confirmButton.interactable = true;
     }
 
     // =========================================================
-    // CONNECTION TIMEOUT
+    // LOADING UI
     // =========================================================
 
-    private Coroutine connectionTimeoutCoroutine;
-
-    private void StartConnectionTimeout()
+    private void ShowLoading()
     {
-        CancelConnectionTimeout();
+        if (backgroundImage != null)
+            backgroundImage.SetActive(false);
 
-        connectionTimeoutCoroutine = StartCoroutine(ConnectionTimeoutCoroutine());
-    }
+        if (menuContainer != null)
+            menuContainer.SetActive(false);
 
-    private void CancelConnectionTimeout()
-    {
-        if (connectionTimeoutCoroutine != null)
+        if (connectionLogo != null)
         {
-            StopCoroutine(connectionTimeoutCoroutine);
-            connectionTimeoutCoroutine = null;
-        }
-    }
+            connectionLogo.gameObject.SetActive(true);
 
-    private IEnumerator ConnectionTimeoutCoroutine()
-    {
-        yield return new WaitForSecondsRealtime(connectionTimeout);
-
-        connectionTimeoutCoroutine = null;
-
-        if (isConnecting)
-        {
-            Debug.LogWarning(
-                "Connection attempt timed out after "
-                + connectionTimeout
-                + " seconds."
-            );
-
-            RestoreMenu();
-
-            // If Photon has become disconnected, reconnect so the
-            // next Host/Join attempt can work normally.
-            if (!PhotonNetwork.IsConnected)
+            if (logoAnimator != null)
             {
-                PhotonNetwork.ConnectUsingSettings();
+                logoAnimator.SetBool("isConnecting", true);
             }
         }
-    }
-
-    private void ShowRoomNotFoundMessage()
-    {
-        if (roomNotFoundImage != null)
-            roomNotFoundImage.SetActive(true);
-
-        if (roomNotFoundText != null)
-            roomNotFoundText.text = "No room found with ID " + input_RoomNumber.text;
-
-        if (roomNotFoundCoroutine != null)
-            StopCoroutine(roomNotFoundCoroutine);
-
-        roomNotFoundCoroutine = StartCoroutine(HideRoomNotFoundAfterDelay());
-    }
-
-    private IEnumerator HideRoomNotFoundAfterDelay()
-    {
-        yield return new WaitForSecondsRealtime(roomNotFoundDisplayTime);
-
-        HideRoomNotFoundMessage();
-    }
-
-    private void HideRoomNotFoundMessage()
-    {
-        if (roomNotFoundCoroutine != null)
-        {
-            StopCoroutine(roomNotFoundCoroutine);
-            roomNotFoundCoroutine = null;
-        }
-
-        if (roomNotFoundImage != null)
-            roomNotFoundImage.SetActive(false);
     }
 
     // =========================================================
@@ -528,7 +411,7 @@ public class HostAndJoinRoom : MonoBehaviourPunCallbacks
     private void SetUsername()
     {
         if (input_Username != null &&
-            !string.IsNullOrWhiteSpace(input_Username.text))
+            !string.IsNullOrEmpty(input_Username.text))
         {
             PhotonNetwork.NickName = input_Username.text;
 
