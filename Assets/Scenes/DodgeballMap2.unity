@@ -239,7 +239,6 @@ GameObject:
   m_Component:
   - component: {fileID: 295249996}
   - component: {fileID: 295249997}
-  - component: {fileID: 295249998}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -283,28 +282,6 @@ MonoBehaviour:
   GameOver: 0
   gameOverUIPanel: {fileID: 611469008}
   WinnerName: {fileID: 959632334}
---- !u!114 &295249998
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 295249995}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ObservedComponentsFoldoutOpen: 1
-  Group: 0
-  prefixField: -1
-  Synchronization: 3
-  OwnershipTransfer: 0
-  observableSearch: 2
-  ObservedComponents: []
-  sceneViewId: 1
-  InstantiationId: 0
-  isRuntimeInstantiated: 0
 --- !u!1 &399621930
 GameObject:
   m_ObjectHideFlags: 0
@@ -699,7 +676,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &611469009
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1544,10 +1521,10 @@ Light:
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
-    m_Type: 2
+    m_Type: 0
     m_Resolution: -1
     m_CustomResolution: -1
-    m_Strength: 0.56
+    m_Strength: 1
     m_Bias: 0.05
     m_NormalBias: 0.4
     m_NearPlane: 0.2
