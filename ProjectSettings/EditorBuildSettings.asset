@@ -8,8 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ConnectingScreen.unity
     guid: a0c33114474049e43b15ec9e798d97d0
-  - enabled: 1
-    path: Assets/Scenes/GameLobby (Obsolete).unity
+  - enabled: 0
+    path: Assets/Scenes/(Obsolete) GameLobby.unity
     guid: 7e8bdafab1bb27d429507734c648e5f7
   - enabled: 1
     path: Assets/Scenes/WaitingRoom.unity
