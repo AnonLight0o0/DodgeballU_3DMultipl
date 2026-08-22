@@ -32,6 +32,9 @@ public class PauseMenu : MonoBehaviour
     private float updateTimer = 0f;
     private const float updateInterval = 0.25f;
 
+    private CursorLockMode previousCursorLockState;
+    private bool previousCursorVisible;
+
     private void Awake()
     {
         // Destroy duplicate instances
@@ -121,6 +124,10 @@ public class PauseMenu : MonoBehaviour
 
         isPaused = true;
 
+        // Remember the cursor state before opening the menu
+        previousCursorLockState = Cursor.lockState;
+        previousCursorVisible = Cursor.visible;
+
         Time.timeScale = 0f;
 
         if (PauseMenuObj != null)
@@ -128,7 +135,7 @@ public class PauseMenu : MonoBehaviour
             PauseMenuObj.SetActive(true);
         }
 
-        // Only unlock cursor when opening the menu
+        // Unlock cursor for the pause menu
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -147,7 +154,9 @@ public class PauseMenu : MonoBehaviour
             PauseMenuObj.SetActive(false);
         }
 
-        // Do NOT change cursor state here.
+        // Restore the cursor to whatever state it had before pausing
+        Cursor.lockState = previousCursorLockState;
+        Cursor.visible = previousCursorVisible;
     }
 
     public void QuitGame()
@@ -191,18 +200,6 @@ public class PauseMenu : MonoBehaviour
             color.a = alpha;
             image.color = color;
         }
-    }
-
-    private void LockCursor()
-    {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-    }
-
-    private void UnlockCursor()
-    {
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 
     private void OnGUI()
