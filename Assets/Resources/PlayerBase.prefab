@@ -927,6 +927,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f209105ef0476f43a4edd92ddb08f60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ControlsEnabled: 1
   moveSpeed: 8
   gravity: -15
   jumpHeight: 1.5
@@ -982,6 +983,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a3d09b9c5e6df034ea539f7099c238e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ControlsEnabled: 1
   HasBall: 1
   throwPoint: {fileID: 6927540110714788689}
   ThrowForce: 30

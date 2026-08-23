@@ -35,7 +35,7 @@ public class GameManager : MonoBehaviourPunCallbacks
             Debug.LogWarning("Not connected to Photon server.");
         }
 
-        // Hide game over screen at the start.
+        // Hide game-over screen at the start.
         if (gameOverUIPanel != null)
         {
             gameOverUIPanel.SetActive(false);
@@ -68,13 +68,11 @@ public class GameManager : MonoBehaviourPunCallbacks
         {
             yield return new WaitForSeconds(1.0f);
 
-            // Stop checking if Photon has disconnected.
             if (!PhotonNetwork.IsConnectedAndReady)
             {
                 continue;
             }
 
-            // Prevent CurrentRoom null-reference errors.
             if (PhotonNetwork.CurrentRoom == null)
             {
                 continue;
@@ -90,13 +88,16 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private void CheckAlivePlayers()
     {
-        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        GameObject[] players =
+            GameObject.FindGameObjectsWithTag("Player");
 
-        List<GameObject> alivePlayers = new List<GameObject>();
+        List<GameObject> alivePlayers =
+            new List<GameObject>();
 
         foreach (GameObject player in players)
         {
-            PlayerHP playerHP = player.GetComponent<PlayerHP>();
+            PlayerHP playerHP =
+                player.GetComponent<PlayerHP>();
 
             if (playerHP != null && playerHP.CurrentHP > 0)
             {
@@ -116,7 +117,8 @@ public class GameManager : MonoBehaviourPunCallbacks
 
             string winnerName = "Unknown";
 
-            if (winnerView != null && winnerView.Owner != null)
+            if (winnerView != null &&
+                winnerView.Owner != null)
             {
                 winnerName = winnerView.Owner.NickName;
             }
@@ -153,35 +155,57 @@ public class GameManager : MonoBehaviourPunCallbacks
             PhotonNetwork.NickName
         );
 
-        // Unlock cursor for the game-over UI
+        // Unlock cursor.
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // Disable player controls
-        GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+        // Disable controls for the local player.
+        GameObject[] players =
+            GameObject.FindGameObjectsWithTag("Player");
 
         foreach (GameObject player in players)
         {
-            PlayerCamera playerCamera = player.GetComponentInChildren<PlayerCamera>();
+            PhotonView playerView =
+                player.GetComponent<PhotonView>();
 
-            if (playerCamera != null)
+            // Only modify this client's own player.
+            if (playerView != null && playerView.IsMine)
             {
-                playerCamera.enabled = false;
-            }
+                PlayerCamera playerCamera =
+                    Camera.main != null
+                        ? Camera.main.GetComponent<PlayerCamera>()
+                        : null;
 
-            PlayerDodgeballInteraction dodgeball =
-                player.GetComponent<PlayerDodgeballInteraction>();
+                if (playerCamera != null)
+                {
+                    playerCamera.ControlsEnabled = false;
+                }
 
-            if (dodgeball != null)
-            {
-                dodgeball.enabled = false;
+                PlayerController playerController =
+                    player.GetComponent<PlayerController>();
+
+                if (playerController != null)
+                {
+                    playerController.ControlsEnabled = false;
+                }
+
+                PlayerDodgeballInteraction dodgeball =
+                    player.GetComponent<PlayerDodgeballInteraction>();
+
+                if (dodgeball != null)
+                {
+                    dodgeball.ControlsEnabled = false;
+                }
             }
         }
 
-        // Show game-over UI
+        // Show game-over UI.
         if (gameOverUIPanel == null)
         {
-            Debug.LogError("Game Over UI Panel is NOT assigned in GameManager!");
+            Debug.LogError(
+                "Game Over UI Panel is NOT assigned in GameManager!"
+            );
+
             return;
         }
 
@@ -189,16 +213,17 @@ public class GameManager : MonoBehaviourPunCallbacks
 
         if (WinnerName != null)
         {
-            WinnerName.text = $"The Winner is: {winnerName}";
+            WinnerName.text =
+                $"The Winner is: {winnerName}";
         }
 
         Debug.Log("Game Over UI enabled.");
     }
 
-    public override void OnMasterClientSwitched(Player newMasterClient)
+    public override void OnMasterClientSwitched(
+        Player newMasterClient)
     {
-        // If the previous Master Client left, the new Master Client
-        // needs to take over win-condition checking.
+        // New Master Client takes over win checking.
         if (PhotonNetwork.IsMasterClient && !GameOver)
         {
             StartCoroutine(CheckWinConditionRoutine());

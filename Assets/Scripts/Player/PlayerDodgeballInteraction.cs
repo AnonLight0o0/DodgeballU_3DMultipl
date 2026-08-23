@@ -6,8 +6,11 @@ using Photon.Pun;
 
 public class PlayerDodgeballInteraction : MonoBehaviourPun
 {
+    [Header("Controls")]
     public bool ControlsEnabled = true;
+
     public bool HasBall = false;
+
     public Transform throwPoint;
     public float ThrowForce = 300f;
 
@@ -20,13 +23,17 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
     [Header("UI")]
     public Slider ChargeSlider;
 
-    [Tooltip("must same name as Dodgeball prefab in Resources folder")]
+    [Tooltip("Must be the same name as the Dodgeball prefab in Resources.")]
     public string ballPrefabName = "Dodgeball";
+
     public float BallCatchCooldown = 1.0f;
+
     private float NextCatchTime = 0f;
 
     private Transform Cam;
-    private List<GameObject> ballInReach = new List<GameObject>();
+
+    private List<GameObject> ballInReach =
+        new List<GameObject>();
 
     private bool isCharging = false;
     private float holdStartTime;
@@ -36,29 +43,45 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
 
     void Start()
     {
-        if (photonView.IsMine && Camera.main != null)
+        if (photonView.IsMine &&
+            Camera.main != null)
         {
             Cam = Camera.main.transform;
         }
 
         if (ChargeSlider != null)
         {
-            ChargeSlider.minValue = MinThrowMultiplier;
-            ChargeSlider.maxValue = MaxThrowMultiplier;
-            ChargeSlider.value = MinThrowMultiplier;
+            ChargeSlider.minValue =
+                MinThrowMultiplier;
+
+            ChargeSlider.maxValue =
+                MaxThrowMultiplier;
+
+            ChargeSlider.value =
+                MinThrowMultiplier;
+
             ChargeSlider.gameObject.SetActive(false);
         }
     }
 
     void Update()
     {
-        if (!photonView.IsMine || !ControlsEnabled || Cam == null)
+        if (!photonView.IsMine ||
+            Cam == null)
             return;
 
-        ballInReach.RemoveAll(ball => ball == null);
+        // Stop all ball interaction after game over.
+        if (!ControlsEnabled)
+            return;
 
-        // Hide slider if player somehow loses the ball
-        if (!HasBall && ChargeSlider != null && ChargeSlider.gameObject.activeSelf)
+        ballInReach.RemoveAll(
+            ball => ball == null
+        );
+
+        // Hide slider if player loses the ball.
+        if (!HasBall &&
+            ChargeSlider != null &&
+            ChargeSlider.gameObject.activeSelf)
         {
             ChargeSlider.gameObject.SetActive(false);
         }
@@ -72,7 +95,8 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
             {
                 holdStartTime = Time.time;
                 isCharging = false;
-                currentMultiplier = MinThrowMultiplier;
+                currentMultiplier =
+                    MinThrowMultiplier;
             }
             else if (Time.time >= NextCatchTime)
             {
@@ -81,43 +105,55 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
         }
 
         // Mouse held
-        if (startedClickWithBall && HasBall && Input.GetMouseButton(0))
+        if (startedClickWithBall &&
+            HasBall &&
+            Input.GetMouseButton(0))
         {
-            if (!isCharging && Time.time - holdStartTime >= ChargeDelay)
+            if (!isCharging &&
+                Time.time - holdStartTime >= ChargeDelay)
             {
                 isCharging = true;
 
                 if (ChargeSlider != null)
                 {
                     ChargeSlider.gameObject.SetActive(true);
-                    ChargeSlider.value = MinThrowMultiplier;
+                    ChargeSlider.value =
+                        MinThrowMultiplier;
                 }
             }
 
             if (isCharging)
             {
-                float t = Mathf.PingPong(
-                    (Time.time - holdStartTime - ChargeDelay) * ChargeSpeed,
-                    1f
-                );
+                float t =
+                    Mathf.PingPong(
+                        (Time.time -
+                        holdStartTime -
+                        ChargeDelay) *
+                        ChargeSpeed,
+                        1f
+                    );
 
-                currentMultiplier = Mathf.Lerp(
-                    MinThrowMultiplier,
-                    MaxThrowMultiplier,
-                    t
-                );
+                currentMultiplier =
+                    Mathf.Lerp(
+                        MinThrowMultiplier,
+                        MaxThrowMultiplier,
+                        t
+                    );
 
                 if (ChargeSlider != null)
                 {
-                    ChargeSlider.value = currentMultiplier;
+                    ChargeSlider.value =
+                        currentMultiplier;
                 }
             }
         }
 
         // Mouse released
-        if (startedClickWithBall && HasBall && Input.GetMouseButtonUp(0))
+        if (startedClickWithBall &&
+            HasBall &&
+            Input.GetMouseButtonUp(0))
         {
-            // Quick throw (released before charging started)
+            // Quick throw
             if (!isCharging)
             {
                 currentMultiplier = 1f;
@@ -128,11 +164,14 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
             startedClickWithBall = false;
             holdStartTime = 0f;
             isCharging = false;
-            currentMultiplier = MinThrowMultiplier;
+            currentMultiplier =
+                MinThrowMultiplier;
 
             if (ChargeSlider != null)
             {
-                ChargeSlider.value = MinThrowMultiplier;
+                ChargeSlider.value =
+                    MinThrowMultiplier;
+
                 ChargeSlider.gameObject.SetActive(false);
             }
         }
@@ -142,20 +181,38 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
     {
         HasBall = false;
 
-        GameObject ball = PhotonNetwork.Instantiate(ballPrefabName, throwPoint.position, Cam.rotation);
+        GameObject ball =
+            PhotonNetwork.Instantiate(
+                ballPrefabName,
+                throwPoint.position,
+                Cam.rotation
+            );
 
-        Rigidbody ballRb = ball.GetComponent<Rigidbody>();
-        Collider ballCollider = ball.GetComponent<Collider>();
+        Rigidbody ballRb =
+            ball.GetComponent<Rigidbody>();
+
+        Collider ballCollider =
+            ball.GetComponent<Collider>();
 
         if (ballCollider != null)
         {
-            StartCoroutine(IgnoreThrowerCollision(ballCollider));
+            StartCoroutine(
+                IgnoreThrowerCollision(
+                    ballCollider
+                )
+            );
         }
 
         if (ballRb != null)
         {
-            Vector3 throwDir = Cam.forward + Vector3.up * 0.1f;
-            ballRb.velocity = throwDir.normalized * ThrowForce * currentMultiplier;
+            Vector3 throwDir =
+                Cam.forward +
+                Vector3.up * 0.1f;
+
+            ballRb.velocity =
+                throwDir.normalized *
+                ThrowForce *
+                currentMultiplier;
         }
     }
 
@@ -163,14 +220,22 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
     {
         if (ballInReach.Count > 0)
         {
-            GameObject ballToCatch = ballInReach[0];
+            GameObject ballToCatch =
+                ballInReach[0];
+
             HasBall = true;
+
             Debug.Log("ball catched.");
 
-            PhotonView ballView = ballToCatch.GetComponent<PhotonView>();
+            PhotonView ballView =
+                ballToCatch.GetComponent<PhotonView>();
+
             if (ballView != null)
             {
-                ballView.RPC("DestroySelf", RpcTarget.All);
+                ballView.RPC(
+                    "DestroySelf",
+                    RpcTarget.All
+                );
             }
 
             ballInReach.RemoveAt(0);
@@ -178,46 +243,72 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
         else
         {
             Debug.Log("ball not catched.");
-            NextCatchTime = Time.time + BallCatchCooldown;
+
+            NextCatchTime =
+                Time.time +
+                BallCatchCooldown;
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine)
+            return;
 
-        if (other.CompareTag("Ball") && !ballInReach.Contains(other.gameObject))
+        if (other.CompareTag("Ball") &&
+            !ballInReach.Contains(other.gameObject))
         {
-            ballInReach.Add(other.gameObject);
+            ballInReach.Add(
+                other.gameObject
+            );
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (!photonView.IsMine) return;
+        if (!photonView.IsMine)
+            return;
 
-        if (other.CompareTag("Ball") && ballInReach.Contains(other.gameObject))
+        if (other.CompareTag("Ball") &&
+            ballInReach.Contains(other.gameObject))
         {
-            ballInReach.Remove(other.gameObject);
+            ballInReach.Remove(
+                other.gameObject
+            );
         }
     }
 
-    private IEnumerator IgnoreThrowerCollision(Collider ballCollider)
+    private IEnumerator IgnoreThrowerCollision(
+        Collider ballCollider)
     {
-        Collider[] playerColliders = GetComponentsInChildren<Collider>();
+        Collider[] playerColliders =
+            GetComponentsInChildren<Collider>();
 
-        foreach (Collider playerCollider in playerColliders)
+        foreach (
+            Collider playerCollider
+            in playerColliders)
         {
-            Physics.IgnoreCollision(playerCollider, ballCollider, true);
+            Physics.IgnoreCollision(
+                playerCollider,
+                ballCollider,
+                true
+            );
         }
 
         yield return new WaitForSeconds(0.15f);
 
-        foreach (Collider playerCollider in playerColliders)
+        foreach (
+            Collider playerCollider
+            in playerColliders)
         {
-            if (playerCollider != null && ballCollider != null)
+            if (playerCollider != null &&
+                ballCollider != null)
             {
-                Physics.IgnoreCollision(playerCollider, ballCollider, false);
+                Physics.IgnoreCollision(
+                    playerCollider,
+                    ballCollider,
+                    false
+                );
             }
         }
     }

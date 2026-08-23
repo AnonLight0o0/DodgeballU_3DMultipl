@@ -4,7 +4,11 @@ using UnityEngine;
 
 public class PlayerCamera : MonoBehaviour
 {
+    [Header("Controls")]
+    public bool ControlsEnabled = true;
+
     public Transform target;
+
     public float distance = 5.0f;
     public float heightOffset = 1.5f;
 
@@ -20,24 +24,42 @@ public class PlayerCamera : MonoBehaviour
     void Start()
     {
         Vector3 angles = transform.eulerAngles;
+
         x = angles.y;
         y = angles.x;
-        Cursor.lockState = CursorLockMode.Locked; 
+
+        Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
     void LateUpdate()
     {
-        if (target == null) return;
+        if (!ControlsEnabled)
+            return;
+
+        if (target == null)
+            return;
 
         x += Input.GetAxis("Mouse X") * xSpeed * 0.02f;
         y -= Input.GetAxis("Mouse Y") * ySpeed * 0.02f;
-        y = Mathf.Clamp(y, yMinLimit, yMaxLimit);
 
-        Quaternion rotation = Quaternion.Euler(y, x, 0);
-        
-        Vector3 targetPos = target.position + Vector3.up * heightOffset;
-        Vector3 position = rotation * new Vector3(0.0f, 0.0f, -distance) + targetPos;
+        y = Mathf.Clamp(
+            y,
+            yMinLimit,
+            yMaxLimit
+        );
+
+        Quaternion rotation =
+            Quaternion.Euler(y, x, 0);
+
+        Vector3 targetPos =
+            target.position +
+            Vector3.up * heightOffset;
+
+        Vector3 position =
+            rotation *
+            new Vector3(0.0f, 0.0f, -distance)
+            + targetPos;
 
         transform.rotation = rotation;
         transform.position = position;
