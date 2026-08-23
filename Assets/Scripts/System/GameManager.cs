@@ -18,47 +18,61 @@ public class GameManager : MonoBehaviourPunCallbacks
     public GameObject gameOverUIPanel;
     public TextMeshProUGUI WinnerName;
 
+    private const string GAME_OVER_KEY = "GameOver";
+    private const string WINNER_NAME_KEY = "WinnerName";
+
     private void Start()
     {
-        if (PhotonNetwork.IsConnectedAndReady)
-        {
-            SpawnPlayer();
-
-            // Only the Master Client checks the win condition.
-            if (PhotonNetwork.IsMasterClient)
-            {
-                StartCoroutine(CheckWinConditionRoutine());
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Not connected to Photon server.");
-        }
-
-        // Hide game-over screen at the start.
+        // Make sure game-over UI starts hidden.
         if (gameOverUIPanel != null)
         {
             gameOverUIPanel.SetActive(false);
         }
+
+        if (!PhotonNetwork.IsConnectedAndReady)
+        {
+            Debug.LogWarning("Not connected to Photon server.");
+            return;
+        }
+
+        // Spawn this client's player.
+        SpawnPlayer();
+
+        // Only Master Client checks the win condition.
+        if (PhotonNetwork.IsMasterClient)
+        {
+            StartCoroutine(CheckWinConditionRoutine());
+        }
+
+        // Check whether the game was already over.
+        CheckExistingGameOverState();
     }
 
     private void SpawnPlayer()
     {
-        Vector3 spawnPosition = Vector3.zero;
-        Quaternion spawnRotation = Quaternion.identity;
-
-        if (spawnPoints != null && spawnPoints.Length > 0)
+        if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            int randomIndex = Random.Range(0, spawnPoints.Length);
-
-            spawnPosition = spawnPoints[randomIndex].position;
-            spawnRotation = spawnPoints[randomIndex].rotation;
+            Debug.LogError("No spawn points assigned!");
+            return;
         }
+
+        int playerIndex = PhotonNetwork.LocalPlayer.ActorNumber - 1;
+
+        // Make sure the index stays within the spawn point array.
+        int spawnIndex = playerIndex % spawnPoints.Length;
+
+        Transform spawnPoint = spawnPoints[spawnIndex];
+
+        Debug.Log(
+            PhotonNetwork.NickName +
+            " spawning at Spawn Point " +
+            spawnIndex
+        );
 
         PhotonNetwork.Instantiate(
             playerPrefabName,
-            spawnPosition,
-            spawnRotation
+            spawnPoint.position,
+            spawnPoint.rotation
         );
     }
 
@@ -78,7 +92,7 @@ public class GameManager : MonoBehaviourPunCallbacks
                 continue;
             }
 
-            // Don't end a match with only one player.
+            // Don't end the match with only one player.
             if (PhotonNetwork.CurrentRoom.PlayerCount > 1)
             {
                 CheckAlivePlayers();
@@ -110,8 +124,6 @@ public class GameManager : MonoBehaviourPunCallbacks
         // One player remains.
         if (alivePlayers.Count == 1)
         {
-            GameOver = true;
-
             PhotonView winnerView =
                 alivePlayers[0].GetComponent<PhotonView>();
 
@@ -123,35 +135,120 @@ public class GameManager : MonoBehaviourPunCallbacks
                 winnerName = winnerView.Owner.NickName;
             }
 
-            Debug.Log("GAME OVER! Winner: " + winnerName);
-
-            photonView.RPC(
-                "RPC_ShowGameOver",
-                RpcTarget.All,
-                winnerName
-            );
+            EndGame(winnerName);
         }
 
         // Nobody remains.
         else if (alivePlayers.Count == 0)
         {
-            GameOver = true;
-
-            Debug.Log("GAME OVER! Draw.");
-
-            photonView.RPC(
-                "RPC_ShowGameOver",
-                RpcTarget.All,
-                "Oopsie, it's a draw."
-            );
+            EndGame("Oopsie, it's a draw.");
         }
     }
 
-    [PunRPC]
-    public void RPC_ShowGameOver(string winnerName)
+    private void EndGame(string winnerName)
+    {
+        // Prevent the Master Client from triggering this multiple times.
+        if (GameOver)
+            return;
+
+        GameOver = true;
+
+        Debug.Log("GAME OVER! Winner: " + winnerName);
+
+        if (PhotonNetwork.CurrentRoom == null)
+        {
+            Debug.LogError("Cannot set Game Over state: no Photon room.");
+            ShowGameOverLocally(winnerName);
+            return;
+        }
+
+        // Store the game-over state in the Photon room.
+        ExitGames.Client.Photon.Hashtable gameOverProperties =
+            new ExitGames.Client.Photon.Hashtable
+            {
+                { GAME_OVER_KEY, true },
+                { WINNER_NAME_KEY, winnerName }
+            };
+
+        PhotonNetwork.CurrentRoom.SetCustomProperties(
+            gameOverProperties
+        );
+
+        // Also show it immediately on the Master Client.
+        ShowGameOverLocally(winnerName);
+    }
+
+    public override void OnRoomPropertiesUpdate(
+        ExitGames.Client.Photon.Hashtable propertiesThatChanged)
+    {
+        base.OnRoomPropertiesUpdate(propertiesThatChanged);
+
+        // Check whether the GameOver property was updated.
+        if (propertiesThatChanged.ContainsKey(GAME_OVER_KEY))
+        {
+            object gameOverValue =
+                propertiesThatChanged[GAME_OVER_KEY];
+
+            if (gameOverValue is bool &&
+                (bool)gameOverValue)
+            {
+                string winnerName = "Unknown";
+
+                if (PhotonNetwork.CurrentRoom != null &&
+                    PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(
+                        WINNER_NAME_KEY))
+                {
+                    winnerName =
+                        PhotonNetwork.CurrentRoom
+                            .CustomProperties[WINNER_NAME_KEY]
+                            .ToString();
+                }
+
+                GameOver = true;
+
+                ShowGameOverLocally(winnerName);
+            }
+        }
+    }
+
+    private void CheckExistingGameOverState()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return;
+
+        if (!PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(
+            GAME_OVER_KEY))
+        {
+            return;
+        }
+
+        object gameOverValue =
+            PhotonNetwork.CurrentRoom.CustomProperties[GAME_OVER_KEY];
+
+        if (gameOverValue is bool &&
+            (bool)gameOverValue)
+        {
+            string winnerName = "Unknown";
+
+            if (PhotonNetwork.CurrentRoom.CustomProperties.ContainsKey(
+                WINNER_NAME_KEY))
+            {
+                winnerName =
+                    PhotonNetwork.CurrentRoom
+                        .CustomProperties[WINNER_NAME_KEY]
+                        .ToString();
+            }
+
+            GameOver = true;
+
+            ShowGameOverLocally(winnerName);
+        }
+    }
+
+    private void ShowGameOverLocally(string winnerName)
     {
         Debug.Log(
-            "RPC_ShowGameOver received on " +
+            "Showing Game Over UI for: " +
             PhotonNetwork.NickName
         );
 
@@ -159,7 +256,7 @@ public class GameManager : MonoBehaviourPunCallbacks
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // Disable controls for the local player.
+        // Disable controls ONLY for this client's player.
         GameObject[] players =
             GameObject.FindGameObjectsWithTag("Player");
 
@@ -168,62 +265,75 @@ public class GameManager : MonoBehaviourPunCallbacks
             PhotonView playerView =
                 player.GetComponent<PhotonView>();
 
-            // Only modify this client's own player.
-            if (playerView != null && playerView.IsMine)
+            if (playerView == null ||
+                !playerView.IsMine)
             {
-                PlayerCamera playerCamera =
-                    Camera.main != null
-                        ? Camera.main.GetComponent<PlayerCamera>()
-                        : null;
+                continue;
+            }
 
-                if (playerCamera != null)
-                {
-                    playerCamera.ControlsEnabled = false;
-                }
+            // Disable camera rotation.
+            PlayerCamera playerCamera =
+                Camera.main != null
+                    ? Camera.main.GetComponent<PlayerCamera>()
+                    : null;
 
-                PlayerController playerController =
-                    player.GetComponent<PlayerController>();
+            if (playerCamera != null)
+            {
+                playerCamera.ControlsEnabled = false;
+            }
 
-                if (playerController != null)
-                {
-                    playerController.ControlsEnabled = false;
-                }
+            // Disable movement.
+            PlayerController playerController =
+                player.GetComponent<PlayerController>();
 
-                PlayerDodgeballInteraction dodgeball =
-                    player.GetComponent<PlayerDodgeballInteraction>();
+            if (playerController != null)
+            {
+                playerController.ControlsEnabled = false;
+            }
 
-                if (dodgeball != null)
-                {
-                    dodgeball.ControlsEnabled = false;
-                }
+            // Disable throwing/catching.
+            PlayerDodgeballInteraction dodgeball =
+                player.GetComponent<PlayerDodgeballInteraction>();
+
+            if (dodgeball != null)
+            {
+                dodgeball.ControlsEnabled = false;
             }
         }
 
-        // Show game-over UI.
-        if (gameOverUIPanel == null)
+        // Show the game-over UI locally.
+        if (gameOverUIPanel != null)
+        {
+            gameOverUIPanel.SetActive(true);
+        }
+        else
         {
             Debug.LogError(
-                "Game Over UI Panel is NOT assigned in GameManager!"
+                "Game Over UI Panel is NOT assigned on " +
+                PhotonNetwork.NickName
             );
 
             return;
         }
 
-        gameOverUIPanel.SetActive(true);
-
+        // Set winner text locally.
         if (WinnerName != null)
         {
             WinnerName.text =
                 $"The Winner is: {winnerName}";
         }
 
-        Debug.Log("Game Over UI enabled.");
+        Debug.Log(
+            "Game Over UI enabled on: " +
+            PhotonNetwork.NickName
+        );
     }
 
     public override void OnMasterClientSwitched(
         Player newMasterClient)
     {
-        // New Master Client takes over win checking.
+        // If the Master Client leaves before the match ends,
+        // the new Master Client takes over win checking.
         if (PhotonNetwork.IsMasterClient && !GameOver)
         {
             StartCoroutine(CheckWinConditionRoutine());

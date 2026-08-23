@@ -182,11 +182,32 @@ public class PlayerDodgeballInteraction : MonoBehaviourPun
         HasBall = false;
 
         GameObject ball =
-            PhotonNetwork.Instantiate(
-                ballPrefabName,
-                throwPoint.position,
-                Cam.rotation
+        PhotonNetwork.Instantiate(
+            ballPrefabName,
+            throwPoint.position,
+            Cam.rotation
+        );
+
+        // Give the ball the same color as the player who threw it.
+        PlayerColor playerColor =
+            GetComponent<PlayerColor>();
+
+        DodgeballLogic dodgeballLogic =
+            ball.GetComponent<DodgeballLogic>();
+
+        if (playerColor != null && dodgeballLogic != null)
+        {
+            Color color = playerColor.GetPlayerColor();
+
+            dodgeballLogic.photonView.RPC(
+                "RPC_SetBallColor",
+                RpcTarget.All,
+                color.r,
+                color.g,
+                color.b,
+                color.a
             );
+        }
 
         Rigidbody ballRb =
             ball.GetComponent<Rigidbody>();

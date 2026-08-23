@@ -776,6 +776,7 @@ GameObject:
   - component: {fileID: 5959849897260856453}
   - component: {fileID: 6266298493354042447}
   - component: {fileID: 8591676417376977872}
+  - component: {fileID: 1317300006799612820}
   m_Layer: 0
   m_Name: PlayerBase
   m_TagString: Player
@@ -988,12 +989,26 @@ MonoBehaviour:
   throwPoint: {fileID: 6927540110714788689}
   ThrowForce: 30
   ChargeDelay: 0.4
-  MinThrowMultiplier: 0.5
-  MaxThrowMultiplier: 1.5
+  MinThrowMultiplier: 1
+  MaxThrowMultiplier: 1.6
   ChargeSpeed: 1
   ChargeSlider: {fileID: 2661262551669538022}
   ballPrefabName: Dodgeball
   BallCatchCooldown: 1
+--- !u!114 &1317300006799612820
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7650271369402009552}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 24bac9731b4c9bf498ea866822b1cf06, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerRenderers:
+  - {fileID: 3397711210596323858}
 --- !u!1 &8042620790093240107
 GameObject:
   m_ObjectHideFlags: 0

@@ -42,6 +42,7 @@ MonoBehaviour:
   - TakeDamage
   - DestroySelf
   - RPC_ShowGameOver
+  - RPC_SetBallColor
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 1

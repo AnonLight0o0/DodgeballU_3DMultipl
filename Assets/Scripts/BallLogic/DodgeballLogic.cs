@@ -29,32 +29,88 @@ public class DodgeballLogic : MonoBehaviourPun
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Player"))
+        if (!collision.gameObject.CompareTag("Player"))
+            return;
+
+        // Check speed
+        if (collision.relativeVelocity.magnitude < minLethalVelocity)
         {
-            // check speed
-            if (collision.relativeVelocity.magnitude >= minLethalVelocity)
+            Debug.Log("Too slow, no damage");
+            return;
+        }
+
+        PlayerHP targetHP =
+            collision.gameObject.GetComponent<PlayerHP>();
+
+        if (targetHP == null)
+        {
+            Debug.LogWarning(
+                "Player was hit, but PlayerHP was not found on " +
+                collision.gameObject.name
+            );
+
+            return;
+        }
+
+        PhotonView targetView =
+            collision.gameObject.GetComponent<PhotonView>();
+
+        if (targetView == null)
+        {
+            Debug.LogWarning(
+                "Player was hit, but PhotonView was not found on " +
+                collision.gameObject.name
+            );
+
+            return;
+        }
+
+        // Deal damage
+        targetHP.photonView.RPC(
+            "TakeDamage",
+            RpcTarget.All
+        );
+
+        // Slow the ball down slightly after hitting a player
+        if (PhotonNetwork.IsMasterClient && rb != null)
+        {
+            rb.velocity = rb.velocity * 0.9f;
+        }
+
+        // Safely get the player's Photon name
+        string targetName = "Unknown";
+
+        if (targetView.Owner != null)
+        {
+            targetName = targetView.Owner.NickName;
+        }
+
+        Debug.Log(
+            "The ball flying at the velocity of " +
+            collision.relativeVelocity.magnitude +
+            " has hit " +
+            targetName
+        );
+    }
+
+    [PunRPC]
+    public void RPC_SetBallColor(
+    float r,
+    float g,
+    float b,
+    float a)
+    {
+        Color color =
+            new Color(r, g, b, a);
+
+        Renderer[] renderers =
+            GetComponentsInChildren<Renderer>();
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer != null)
             {
-                PlayerHP targetHP = collision.gameObject.GetComponent<PlayerHP>();
-                if (targetHP != null)
-                {
-                    PhotonView targetView = collision.gameObject.GetComponent<PhotonView>();
-                    if (targetView != null)
-                    {
-                        // get hp
-                        targetHP.photonView.RPC("TakeDamage", RpcTarget.All/*, damage*/); //enable damage if need damage numbers other than 1
-                        
-                        if (PhotonNetwork.IsMasterClient)
-                        {
-                            rb.velocity = rb.velocity * 0.9f; 
-                        }
-                        
-                        Debug.Log("The ball flying at the velocity of" + collision.relativeVelocity.magnitude + " has hit " + targetView.Owner.NickName);
-                    }
-                }
-            }
-            else
-            {
-                Debug.Log("too slow, no damage");
+                renderer.material.color = color;
             }
         }
     }
