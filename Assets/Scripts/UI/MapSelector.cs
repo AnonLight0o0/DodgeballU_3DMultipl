@@ -242,10 +242,10 @@ public class MapSelector : MonoBehaviour
         RectTransform[] transforms = GetMapTransforms();
 
         // Far left
-        transforms[0].SetSiblingIndex(1);
+        transforms[0].SetSiblingIndex(0);
 
         // Left
-        transforms[1].SetSiblingIndex(0);
+        transforms[1].SetSiblingIndex(1);
 
         // Right
         transforms[3].SetSiblingIndex(3);

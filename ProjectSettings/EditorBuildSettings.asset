@@ -8,9 +8,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ConnectingScreen.unity
     guid: a0c33114474049e43b15ec9e798d97d0
-  - enabled: 0
-    path: Assets/Scenes/(Obsolete) GameLobby.unity
-    guid: 7e8bdafab1bb27d429507734c648e5f7
+  - enabled: 1
+    path: Assets/Scenes/GameLobby.unity
+    guid: c2a75a987e5cbd04e9500e63314aacb9
   - enabled: 1
     path: Assets/Scenes/WaitingRoom.unity
     guid: 5bdd53c29205a8f41b648dceae0d02a6
@@ -21,6 +21,9 @@ EditorBuildSettings:
     path: Assets/Scenes/DodgeballMap2.unity
     guid: 149c29173cc2ad7418c434c8704a81f5
   - enabled: 1
-    path: Assets/Scenes/GameLobby.unity
-    guid: c2a75a987e5cbd04e9500e63314aacb9
+    path: Assets/Scenes/DodgeballMap3.unity
+    guid: 05070139fc7bad44daab7dd75e759a9a
+  - enabled: 1
+    path: Assets/Scenes/DodgeballMap4.unity
+    guid: 9c199797d758bd842b5eec4dfa7b722d
   m_configObjects: {}
