@@ -13,7 +13,17 @@ public class PlayerHP : MonoBehaviourPun
 
     void Start()
     {
+        // Every networked player needs their HP initialized
         CurrentHP = MaxHP;
+
+        // Only show the health bar for the local player
+        if (!photonView.IsMine)
+        {
+            if (HealthBar != null)
+                HealthBar.SetActive(false);
+
+            return;
+        }
 
         healthOrbs = new GameObject[5];
 
@@ -44,6 +54,9 @@ public class PlayerHP : MonoBehaviourPun
 
     private void UpdateHealthUI()
     {
+        if (!photonView.IsMine)
+            return;
+
         if (healthOrbs == null)
             return;
 
@@ -58,11 +71,19 @@ public class PlayerHP : MonoBehaviourPun
 
     // PunRPC is needed, don't delete
     [PunRPC]
-    public void TakeDamage(/*int damageNumbers*/)
+    public void TakeDamage()
     {
-        CurrentHP -= 1; //要改数值的话记得把damageNumbers丢这里替代1
-        UpdateHealthUI();
-        Debug.Log($"{photonView.Owner.NickName} was hit! Current HP:{CurrentHP}");
+        CurrentHP -= 1;
+
+        // Only the owner updates their own health bar
+        if (photonView.IsMine)
+        {
+            UpdateHealthUI();
+        }
+
+        Debug.Log(
+            $"{photonView.Owner.NickName} was hit! Current HP: {CurrentHP}"
+        );
 
         if (CurrentHP <= 0)
         {

@@ -29,6 +29,10 @@ public class DodgeballLogic : MonoBehaviourPun
 
     private void OnCollisionEnter(Collision collision)
     {
+        // Only Master Client handles dodgeball damage
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
         if (!collision.gameObject.CompareTag("Player"))
             return;
 
@@ -72,7 +76,7 @@ public class DodgeballLogic : MonoBehaviourPun
         );
 
         // Slow the ball down slightly after hitting a player
-        if (PhotonNetwork.IsMasterClient && rb != null)
+        if (rb != null)
         {
             rb.velocity = rb.velocity * 0.9f;
         }

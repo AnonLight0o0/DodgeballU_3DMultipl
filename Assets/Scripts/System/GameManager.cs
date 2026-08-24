@@ -23,7 +23,6 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private void Start()
     {
-        // Make sure game-over UI starts hidden.
         if (gameOverUIPanel != null)
         {
             gameOverUIPanel.SetActive(false);
@@ -35,17 +34,17 @@ public class GameManager : MonoBehaviourPunCallbacks
             return;
         }
 
-        // Spawn this client's player.
+        if (PhotonNetwork.IsMasterClient)
+        {
+            ResetGameState();
+        }
+
         SpawnPlayer();
 
-        // Only Master Client checks the win condition.
         if (PhotonNetwork.IsMasterClient)
         {
             StartCoroutine(CheckWinConditionRoutine());
         }
-
-        // Check whether the game was already over.
-        CheckExistingGameOverState();
     }
 
     private void SpawnPlayer()
@@ -74,6 +73,25 @@ public class GameManager : MonoBehaviourPunCallbacks
             spawnPoint.position,
             spawnPoint.rotation
         );
+    }
+
+    private void ResetGameState()
+    {
+        if (PhotonNetwork.CurrentRoom == null)
+            return;
+
+        ExitGames.Client.Photon.Hashtable resetProperties =
+            new ExitGames.Client.Photon.Hashtable
+            {
+                { GAME_OVER_KEY, false },
+                { WINNER_NAME_KEY, "" }
+            };
+
+        PhotonNetwork.CurrentRoom.SetCustomProperties(resetProperties);
+
+        GameOver = false;
+
+        Debug.Log("Previous Game Over state reset.");
     }
 
     private IEnumerator CheckWinConditionRoutine()

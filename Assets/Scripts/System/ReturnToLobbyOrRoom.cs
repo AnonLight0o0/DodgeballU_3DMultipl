@@ -8,9 +8,6 @@ public class ReturnToLobbyOrRoom : MonoBehaviourPunCallbacks
     public string LobbyScene = "GameLobby";
     public string RoomScene = "WaitingRoom";
 
-    // Keeps track of where the player wants to go after leaving Photon
-    private bool returnToWaitingRoom = false;
-
     // ==========================================
     // RETURN TO GAME LOBBY
     // ==========================================
@@ -26,10 +23,6 @@ public class ReturnToLobbyOrRoom : MonoBehaviourPunCallbacks
 
         Time.timeScale = 1f;
 
-        // Tell OnLeftRoom where we want to go
-        returnToWaitingRoom = false;
-
-        // Leave Photon room first
         PhotonNetwork.LeaveRoom();
     }
 
@@ -48,11 +41,9 @@ public class ReturnToLobbyOrRoom : MonoBehaviourPunCallbacks
 
         Time.timeScale = 1f;
 
-        // Tell OnLeftRoom where we want to go
-        returnToWaitingRoom = true;
-
-        // Leave Photon room first
-        PhotonNetwork.LeaveRoom();
+        // Only this player's scene changes.
+        // The player stays inside the Photon room.
+        SceneManager.LoadScene(RoomScene);
     }
 
     // ==========================================
@@ -60,28 +51,16 @@ public class ReturnToLobbyOrRoom : MonoBehaviourPunCallbacks
     // ==========================================
     public override void OnLeftRoom()
     {
+        Debug.Log(
+            PhotonNetwork.NickName +
+            " left the room. Returning to Game Lobby."
+        );
+
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
         Time.timeScale = 1f;
 
-        if (returnToWaitingRoom)
-        {
-            Debug.Log(
-                PhotonNetwork.NickName +
-                " left the room. Returning to Waiting Room."
-            );
-
-            PhotonNetwork.LoadLevel(RoomScene);
-        }
-        else
-        {
-            Debug.Log(
-                PhotonNetwork.NickName +
-                " left the room. Returning to Game Lobby."
-            );
-
-            PhotonNetwork.LoadLevel(LobbyScene);
-        }
+        SceneManager.LoadScene(LobbyScene);
     }
 }
