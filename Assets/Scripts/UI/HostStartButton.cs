@@ -1,7 +1,8 @@
-using UnityEngine;
 using Photon.Pun;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
-public class HostStartButton : MonoBehaviour
+public class HostStartButton : MonoBehaviourPunCallbacks
 {
     [Header("Map Selector")]
     [SerializeField] private MapSelector mapSelector;
@@ -71,11 +72,18 @@ public class HostStartButton : MonoBehaviour
         {
             Debug.Log("Returning to Game Lobby.");
 
-            PhotonNetwork.LoadLevel(gameLobbyScene);
+            PhotonNetwork.LeaveRoom();
         }
         else
         {
             Debug.Log("Only the Master Client can return to the Game Lobby.");
         }
+    }
+
+    public override void OnLeftRoom()
+    {
+        Debug.Log("Successfully left the room. Loading Game Lobby.");
+
+        SceneManager.LoadScene(gameLobbyScene);
     }
 }

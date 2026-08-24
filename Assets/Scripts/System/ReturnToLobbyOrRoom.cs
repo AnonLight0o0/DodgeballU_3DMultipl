@@ -8,11 +8,12 @@ public class ReturnToLobbyOrRoom : MonoBehaviourPunCallbacks
     public string LobbyScene = "GameLobby";
     public string RoomScene = "WaitingRoom";
 
+    // Keeps track of where the player wants to go after leaving Photon
+    private bool returnToWaitingRoom = false;
+
     // ==========================================
     // RETURN TO GAME LOBBY
     // ==========================================
-    // Only the player who clicks this leaves.
-    // Other players are completely unaffected.
     public void ReturnToLobby()
     {
         Debug.Log(
@@ -25,15 +26,16 @@ public class ReturnToLobbyOrRoom : MonoBehaviourPunCallbacks
 
         Time.timeScale = 1f;
 
-        // Only THIS client leaves the Photon room.
+        // Tell OnLeftRoom where we want to go
+        returnToWaitingRoom = false;
+
+        // Leave Photon room first
         PhotonNetwork.LeaveRoom();
     }
 
     // ==========================================
     // RETURN TO WAITING ROOM
     // ==========================================
-    // Only the player who clicks this changes scene.
-    // Other players are completely unaffected.
     public void ReturnToWaitingRoom()
     {
         Debug.Log(
@@ -46,29 +48,40 @@ public class ReturnToLobbyOrRoom : MonoBehaviourPunCallbacks
 
         Time.timeScale = 1f;
 
-        // IMPORTANT:
-        // Do NOT use PhotonNetwork.LoadLevel().
-        // That would move everyone to the scene.
-        SceneManager.LoadScene(RoomScene);
+        // Tell OnLeftRoom where we want to go
+        returnToWaitingRoom = true;
+
+        // Leave Photon room first
+        PhotonNetwork.LeaveRoom();
     }
 
     // ==========================================
     // AFTER LEAVING PHOTON ROOM
     // ==========================================
-    // This only happens for the player who
-    // clicked ReturnToLobby().
     public override void OnLeftRoom()
     {
-        Debug.Log(
-            PhotonNetwork.NickName +
-            " left the room. Returning to Game Lobby."
-        );
-
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
         Time.timeScale = 1f;
 
-        SceneManager.LoadScene(LobbyScene);
+        if (returnToWaitingRoom)
+        {
+            Debug.Log(
+                PhotonNetwork.NickName +
+                " left the room. Returning to Waiting Room."
+            );
+
+            PhotonNetwork.LoadLevel(RoomScene);
+        }
+        else
+        {
+            Debug.Log(
+                PhotonNetwork.NickName +
+                " left the room. Returning to Game Lobby."
+            );
+
+            PhotonNetwork.LoadLevel(LobbyScene);
+        }
     }
 }
